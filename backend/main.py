@@ -7,6 +7,10 @@ from datetime import datetime, date
 from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File, Form
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
+
+# Load keys from .env file (for local development)
+load_dotenv()
 
 app = FastAPI()
 
@@ -19,24 +23,17 @@ app.add_middleware(
 )
 
 # ==========================================
-# 1. API KEYS & CONFIGURATION
+# 1. API KEYS (SECURE LOAD)
 # ==========================================
 
-# ⚠️ WARNING: Never push these keys to a public GitHub repo!
-# API for Emails (Waitlist)
-SHEET_WAITLIST_URL = "https://sheetdb.io/api/v1/o5imc2ju7gvga"
-# API for Reviews (Articles)
-SHEET_REVIEWS_URL = "https://sheetdb.io/api/v1/n9oa94b9ofb4u" 
+# We now get these from the Environment, not hardcoded text
+SHEET_WAITLIST_URL = os.getenv("SHEET_WAITLIST_URL")
+SHEET_REVIEWS_URL  = os.getenv("SHEET_REVIEWS_URL")
+NEON_DB_URL        = os.getenv("NEON_DB_URL")
+FACEPP_KEY         = os.getenv("FACEPP_KEY")
+FACEPP_SECRET      = os.getenv("FACEPP_SECRET")
+WEATHER_KEY        = os.getenv("WEATHER_KEY")
 
-# Face++ & Weather Keys (Integrated)
-FACEPP_KEY    = "vt8oDV1ETy5m6f-fc8PCf4wZyFvsVkCR"
-FACEPP_SECRET = "2-ATNwQ-NrJzZfXtSiASyxgfkfeJdKOs"
-WEATHER_KEY   = "a763c6ae80b21ee743c7c7b45f096327"
-
-# Neon DB (Challenger)
-NEON_DB_URL = "postgresql://neondb_owner:npg_bMBAXVor8v4K@ep-misty-block-ahj3mfgx-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
-
-# Local DB Name
 DB_NAME = "skincache.db"
 
 # ==========================================
@@ -51,7 +48,8 @@ def init_local_db():
                  (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, skinType TEXT, title TEXT, fullStory TEXT, location TEXT, concerns TEXT, rating INTEGER DEFAULT 5, time TEXT DEFAULT "Just now")''')
     conn.commit()
     conn.close()
-    restore_reviews()
+    if SHEET_REVIEWS_URL: # Only restore if key exists
+        restore_reviews()
 
 def restore_reviews():
     try:
@@ -73,6 +71,9 @@ def restore_reviews():
         print(f"⚠️ Restore Failed: {e}")
 
 def init_neon_db():
+    if not NEON_DB_URL:
+        print("⚠️ No Neon URL found. Skipping Cloud DB.")
+        return
     try:
         conn = psycopg2.connect(NEON_DB_URL)
         cur = conn.cursor()
@@ -123,12 +124,14 @@ class ChallengeCheckin(BaseModel):
 
 def save_waitlist_to_sheet(name, email):
     try:
-        requests.post(SHEET_WAITLIST_URL, json={"data": {"name": name, "email": email, "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}})
+        if SHEET_WAITLIST_URL:
+            requests.post(SHEET_WAITLIST_URL, json={"data": {"name": name, "email": email, "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}})
     except: pass
 
 def save_review_to_sheet(data: ReviewData):
     try:
-        requests.post(SHEET_REVIEWS_URL, json={"data": {"name": data.name, "skinType": data.skinType, "title": data.title, "fullStory": data.review, "location": data.location, "concerns": data.concerns, "date": datetime.now().strftime("%Y-%m-%d")}})
+        if SHEET_REVIEWS_URL:
+            requests.post(SHEET_REVIEWS_URL, json={"data": {"name": data.name, "skinType": data.skinType, "title": data.title, "fullStory": data.review, "location": data.location, "concerns": data.concerns, "date": datetime.now().strftime("%Y-%m-%d")}})
     except: pass
 
 def get_neon_connection():
@@ -140,7 +143,7 @@ def get_neon_connection():
 
 @app.get("/")
 def read_root():
-    return {"status": "SkinCache System Live"}
+    return {"status": "SkinCache Hybrid Backend is Live!"}
 
 # --- A. WAITLIST ---
 @app.post("/join")
@@ -182,7 +185,7 @@ def get_reviews():
     finally:
         conn.close()
 
-# --- C. CHALLENGES (Neon) ---
+# --- C. CHALLENGES ---
 @app.post("/challenge/status")
 def get_challenge_status(data: ChallengeCheckin):
     try:
@@ -225,16 +228,15 @@ def check_in_challenge(data: ChallengeCheckin):
         print(e)
         raise HTTPException(status_code=500, detail="Cloud DB Error")
 
-# --- D. SKIN ANALYSIS (Proxy for Face++ & Weather) ---
+# --- D. PROXY ENDPOINT ---
 @app.post("/analyze")
 async def analyze_skin(file: UploadFile = File(...), lat: str = Form("0"), lon: str = Form("0")):
     try:
-        # 1. READ IMAGE
+        if not FACEPP_KEY or not FACEPP_SECRET:
+             return {"error": "Server API Keys missing"}
+
         image_data = await file.read()
-        
-        # 2. CALL FACE++ (Server-to-Server)
-        print("🔍 Sending to Face++...")
-        response_face = requests.post(
+        res = requests.post(
             "https://api-us.faceplusplus.com/facepp/v3/detect",
             data={
                 "api_key": FACEPP_KEY,
@@ -243,19 +245,14 @@ async def analyze_skin(file: UploadFile = File(...), lat: str = Form("0"), lon: 
             },
             files={"image_file": image_data}
         )
-        face_data = response_face.json()
-
-        # 3. CALL WEATHER
-        weather_data = {"aqi": 1}
-        if lat != "0" and lon != "0":
+        
+        aqi = 1
+        if lat != "0" and WEATHER_KEY:
             try:
-                aqi_res = requests.get(f"http://api.openweathermap.org/data/2.5/air_pollution?lat={lat}&lon={lon}&appid={WEATHER_KEY}")
-                if aqi_res.status_code == 200:
-                    weather_data['aqi'] = aqi_res.json()['list'][0]['main']['aqi']
+                w_res = requests.get(f"http://api.openweathermap.org/data/2.5/air_pollution?lat={lat}&lon={lon}&appid={WEATHER_KEY}")
+                if w_res.status_code == 200: aqi = w_res.json()['list'][0]['main']['aqi']
             except: pass
-
-        return {"face": face_data, "weather": weather_data}
-
+        
+        return {"face": res.json(), "weather": {"aqi": aqi}}
     except Exception as e:
-        print(f"Analysis Error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        return {"error": str(e)}
