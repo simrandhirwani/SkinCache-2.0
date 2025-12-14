@@ -2,7 +2,8 @@ import sqlite3
 import os
 import requests
 import psycopg2 
-import google.generativeai as genai
+import base64
+import json
 from psycopg2.extras import RealDictCursor
 from datetime import datetime, date
 from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File, Form
@@ -33,13 +34,9 @@ NEON_DB_URL        = os.getenv("NEON_DB_URL")
 FACEPP_KEY         = os.getenv("FACEPP_KEY")
 FACEPP_SECRET      = os.getenv("FACEPP_SECRET")
 WEATHER_KEY        = os.getenv("WEATHER_KEY")
-GEMINI_API_KEY     = os.getenv("GEMINI_API_KEY") # <--- NEW KEY
+GEMINI_API_KEY     = os.getenv("GEMINI_API_KEY") 
 
 DB_NAME = "skincache.db"
-
-# Configure Google AI
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
 
 # ==========================================
 # 2. DATABASE INITIALIZATION
@@ -262,7 +259,7 @@ async def analyze_skin(file: UploadFile = File(...), lat: str = Form("0"), lon: 
     except Exception as e:
         return {"error": str(e)}
 
-# --- E. NEW: INGREDIENT ANALYZER (GEMINI AI) ---
+# --- E. ROBUST GEMINI (HTTP Mode - No Library) ---
 @app.post("/analyze-ingredients")
 async def analyze_ingredients(
     text: str = Form(None), 
@@ -272,12 +269,8 @@ async def analyze_ingredients(
         if not GEMINI_API_KEY:
             raise HTTPException(status_code=500, detail="Gemini Key Missing in Server")
 
-        
-        
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        
-        # PROMPT: Strict Dermatologist Mode
-        system_prompt = """
+        # 1. PREPARE PROMPT
+        prompt_text = """
         You are an expert Dermatologist. Analyze the skincare ingredients provided.
         Identify the Top 3 "Hero" ingredients and any "Risky" ingredients (comedogenic, irritants, fungal acne triggers).
         Return ONLY valid JSON in this exact format, do not wrap in markdown:
@@ -290,33 +283,49 @@ async def analyze_ingredients(
         }
         """
 
-        response = None
+        # 2. BUILD PAYLOAD
+        parts = [{"text": prompt_text}]
         
-        # CASE A: Image (OCR + Analysis)
+        if text:
+            parts.append({"text": f"Ingredients list: {text}"})
+        
         if file:
             print("📸 Processing Ingredient Photo...")
             image_bytes = await file.read()
+            # Convert image bytes to Base64 string
+            image_b64 = base64.b64encode(image_bytes).decode('utf-8')
             
-            # Create a blob for Gemini
-            cookie_picture = {
-                'mime_type': file.content_type,
-                'data': image_bytes
-            }
-            response = model.generate_content([system_prompt, cookie_picture])
-            
-        # CASE B: Text
-        elif text:
-            print("📝 Processing Ingredient Text...")
-            response = model.generate_content([system_prompt, f"Ingredients list: {text}"])
-        
-        else:
-            return {"error": "No input provided"}
+            parts.append({
+                "inline_data": {
+                    "mime_type": file.content_type,
+                    "data": image_b64
+                }
+            })
 
-        # Clean up response (remove markdown backticks if Gemini adds them)
-        clean_json = response.text.replace("```json", "").replace("```", "").strip()
+        # 3. DIRECT HTTP REQUEST (Bypasses Library Version Issues)
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
         
-        return {"analysis": clean_json}
+        payload = {
+            "contents": [{ "parts": parts }]
+        }
+
+        print("🚀 Sending Direct Request to Google Gemini...")
+        response = requests.post(url, json=payload)
+        
+        if response.status_code != 200:
+            print(f"Google API Error: {response.text}")
+            return {"error": "Google AI Refused Connection"}
+
+        # 4. PARSE RESPONSE
+        result = response.json()
+        try:
+            raw_text = result['candidates'][0]['content']['parts'][0]['text']
+            clean_json = raw_text.replace("```json", "").replace("```", "").strip()
+            return {"analysis": clean_json}
+        except KeyError:
+             print(f"Unexpected Response Structure: {result}")
+             return {"error": "AI could not process this image."}
 
     except Exception as e:
-        print(f"Gemini Error: {e}")
+        print(f"Server Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
