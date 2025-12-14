@@ -1,62 +1,10 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Navbar from '../components/Navbar';
-import { Filter, X, ArrowRight, Beaker, User, PenTool, Heart, Droplets, Sun, Sparkles, Layers } from 'lucide-react';
+import { Filter, X, ArrowRight, Beaker, User, PenTool, Heart, Droplets, Sun, Sparkles, MapPin, Star } from 'lucide-react';
 
-// --- 1. USER REVIEWS DATA ---
-const INITIAL_REVIEWS = [
-  {
-    id: 1,
-    name: "Simran",
-    skinType: "Dry • Sensitive",
-    concerns: "Dehydration, Redness",
-    location: "Mumbai",
-    rating: 5,
-    heroIngredients: ["Ceramides", "Snail Mucin", "Hyaluronic Acid"],
-    title: "How I fixed my damaged barrier in 2 weeks",
-    fullStory: "Living in Mumbai's humidity usually means oily skin, but my office AC was wrecking my moisture barrier. I started noticing extreme redness and flaking around my nose. I realized I was over-exfoliating. \n\nMy fix was simple: I stopped all actives and focused on barrier support. The Laneige Cream Skin Refiner acted as a liquid moisturizer, and the Snail Mucin provided the deep hydration layer. Within 2 weeks, the stinging sensation stopped completely.",
-    time: "2h ago"
-  },
-  {
-    id: 2,
-    name: "Rahul",
-    skinType: "Oily • Acne-Prone",
-    concerns: "Cystic Acne, Pores",
-    location: "Bangalore",
-    rating: 5,
-    heroIngredients: ["Salicylic Acid (BHA)", "Niacinamide", "Green Tea"],
-    title: "Stopping the breakout cycle without drying out",
-    fullStory: "I used to think drying out my skin was the only way to stop acne. I was wrong. It only made my skin produce more oil to compensate. \n\nThe game changer was introducing Salicylic Acid only 2x a week and using Niacinamide daily. This combination unclogged my pores while regulating oil production. The Green Tea toner helps calm the active inflammation immediately after shaving.",
-    time: "5h ago"
-  },
-  {
-    id: 3,
-    name: "Priya",
-    skinType: "Combination",
-    concerns: "T-Zone Oil, Dry Cheeks",
-    location: "Delhi",
-    rating: 4,
-    heroIngredients: ["Glycolic Acid", "Glycerin", "Panthenol"],
-    title: "Balancing the T-Zone in Delhi's Pollution",
-    fullStory: "Delhi pollution is a nightmare for combination skin. My T-zone would get greasy and clogged, while my cheeks felt tight. \n\nI switched to 'Zone Treatment'. I use a clay mask only on my nose and forehead, and a heavy Panthenol cream on my cheeks. Double cleansing is non-negotiable for me now to get the pollution particles off before bed.",
-    time: "1d ago"
-  },
-  {
-    id: 4,
-    name: "Ananya",
-    skinType: "Sensitive • Rosacea",
-    concerns: "Heat Sensitivity",
-    location: "Pune",
-    rating: 5,
-    heroIngredients: ["Centella Asiatica (Cica)", "Azelaic Acid"],
-    title: "Calming the heat flare-ups instantly",
-    fullStory: "My Rosacea flares up the moment I step into the sun. My cheeks get hot and red. Most anti-aging products sting my face. \n\nI discovered Centella Asiatica (Cica) and it changed everything. I keep my sheet masks in the fridge. The Azelaic Acid helps with the redness long-term without the irritation that comes from Retinols. If you have heat sensitivity, keep your routine cold!",
-    time: "2d ago"
-  }
-];
-
-// --- 2. EDUCATIONAL GUIDES DATA (NEW) ---
+// --- STATIC GUIDES DATA ---
 const GUIDES = [
   {
     id: 101,
@@ -66,7 +14,7 @@ const GUIDES = [
     concerns: "Flaking, Tightness",
     heroIngredients: ["Hyaluronic Acid", "Ceramides", "Squalane"],
     title: "The Beginner's Guide to Dry Skin",
-    fullStory: "Dry skin lacks oil/lipids, unlike dehydrated skin which lacks water. If your skin feels tight after washing, you likely have a compromised moisture barrier.\n\n**The Strategy:**\n1. **No Foaming Cleansers:** Switch to milky or cream cleansers.\n2. **Damp Skin Rule:** Always apply hydration products on damp skin to lock moisture in.\n3. **Seal It In:** Use an occlusive moisturizer (one that sits on top) at night to prevent water loss while you sleep.\n\nAvoid hot water showers as they strip your natural oils!",
+    fullStory: "Dry skin lacks oil/lipids. If your skin feels tight after washing, you likely have a compromised moisture barrier.\n\n**Strategy:**\n1. No Foaming Cleansers.\n2. Damp Skin Rule.\n3. Seal It In with occlusives.",
     icon: <Droplets className="text-blue-500" size={24} />,
     color: "bg-blue-50",
     accent: "border-blue-100"
@@ -77,9 +25,9 @@ const GUIDES = [
     location: "Expert Guide",
     skinType: "Oily Skin • Control",
     concerns: "Shine, Clogged Pores",
-    heroIngredients: ["Niacinamide", "BHA (Salicylic)", "Clay"],
+    heroIngredients: ["Niacinamide", "BHA", "Clay"],
     title: "Mastering Oily Skin Control",
-    fullStory: "Oily skin is often genetic, but it can be worsened by stripping your skin. When you dry out your skin too much, it panics and produces MORE oil.\n\n**The Strategy:**\n1. **Hydrate, Don't Dry:** Yes, oily skin needs moisturizer! Look for 'Gel-based' or 'Water-cream' textures.\n2. **The Niacinamide Magic:** This ingredient regulates sebum production over time. Use it daily.\n3. **Clay Masks:** Use a Kaolin clay mask 1x a week to pull deep impurities, but don't let it crack dry on your face.",
+    fullStory: "Oily skin is genetic but worsened by stripping. \n\n**Strategy:**\n1. Hydrate with gels.\n2. Niacinamide daily.\n3. Clay masks weekly.",
     icon: <Sun className="text-orange-500" size={24} />,
     color: "bg-orange-50",
     accent: "border-orange-100"
@@ -87,14 +35,16 @@ const GUIDES = [
 ];
 
 export default function Community() {
-  const [reviews, setReviews] = useState(INITIAL_REVIEWS);
+  const [reviews, setReviews] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [selectedRoutine, setSelectedRoutine] = useState(null);
+  const [isBestMatchMode, setIsBestMatchMode] = useState(false); // To show "Best Match" badge
 
   // Form State
   const [newReview, setNewReview] = useState({
     name: '',
-    skinType: '',
+    skinType: 'Combination',
+    location: 'Mumbai', // Default to common city
     title: '',
     review: ''
   });
@@ -106,32 +56,103 @@ export default function Community() {
     location: "All"
   });
 
+  // --- FETCH DATA ---
+  const fetchReviews = async () => {
+    try {
+      // ✅ CHANGED: Live Render URL
+      const response = await fetch('https://skincache-2-0.onrender.com/reviews');
+      const data = await response.json();
+      
+      const formattedData = data.map(item => ({
+        ...item,
+        // Backend might return defaults, ensuring array for ingredients
+        heroIngredients: ["Community Verified", "User Routine"] 
+      }));
+      setReviews(formattedData);
+    } catch (error) {
+      console.error("Error fetching reviews:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchReviews();
+  }, []);
+
+  // --- SMART FILTERING LOGIC (BEST MATCH ALGORITHM) ---
   const filteredReviews = useMemo(() => {
-    return reviews.filter(review => {
-      const matchSkin = filters.skinType === "All" || review.skinType.toLowerCase().includes(filters.skinType.toLowerCase());
-      const matchConcern = filters.concern === "All" || review.concerns.toLowerCase().includes(filters.concern.toLowerCase());
-      const matchLocation = filters.location === "All" || review.location === filters.location;
+    setIsBestMatchMode(false); // Reset mode
+
+    // 1. If no filters, show all
+    if (filters.skinType === "All" && filters.concern === "All" && filters.location === "All") {
+      return reviews;
+    }
+
+    // 2. Try EXACT MATCH first (Strict AND Logic)
+    const exactMatches = reviews.filter(review => {
+      const matchSkin = filters.skinType === "All" || (review.skinType && review.skinType.toLowerCase().includes(filters.skinType.toLowerCase()));
+      const matchConcern = filters.concern === "All" || (review.concerns && review.concerns.toLowerCase().includes(filters.concern.toLowerCase()));
+      const matchLocation = filters.location === "All" || (review.location && review.location.toLowerCase().includes(filters.location.toLowerCase()));
       return matchSkin && matchConcern && matchLocation;
     });
+
+    // If we found exact matches, return them!
+    if (exactMatches.length > 0) {
+      return exactMatches;
+    }
+
+    // 3. FALLBACK: SCORING SYSTEM (Best Match Logic)
+    // If strict match failed, grade reviews by relevance
+    const scoredReviews = reviews.map(review => {
+      let score = 0;
+      // Weight: Skin Type is most important (10 pts)
+      if (filters.skinType !== "All" && review.skinType && review.skinType.toLowerCase().includes(filters.skinType.toLowerCase())) score += 10;
+      // Weight: Concern is medium (5 pts)
+      if (filters.concern !== "All" && review.concerns && review.concerns.toLowerCase().includes(filters.concern.toLowerCase())) score += 5;
+      // Weight: Location is bonus (2 pts)
+      if (filters.location !== "All" && review.location && review.location.toLowerCase().includes(filters.location.toLowerCase())) score += 2;
+      
+      return { ...review, score };
+    });
+
+    // Sort by score (Highest first)
+    scoredReviews.sort((a, b) => b.score - a.score);
+
+    // If the best score is 0, nothing matches at all. Return empty (or all).
+    // Otherwise, return top results.
+    if (scoredReviews.length > 0 && scoredReviews[0].score > 0) {
+      setIsBestMatchMode(true); // Enable badge
+      // Return only the items with the highest score (e.g., if two items both have score 10, show both)
+      return scoredReviews.filter(r => r.score === scoredReviews[0].score);
+    }
+
+    return []; // Truly nothing found
   }, [reviews, filters]);
 
-  const handleSubmit = (e) => {
+  // --- SUBMIT ---
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const reviewToAdd = {
-      id: Date.now(),
+    const reviewData = {
       name: newReview.name || "Community User",
-      skinType: newReview.skinType || "Combination",
-      concerns: "User Story",
-      location: "India",
-      rating: 5,
-      heroIngredients: ["Community Pick"],
-      title: newReview.title || "My Skin Journey",
-      fullStory: newReview.review || "I wanted to share my experience...",
-      time: "Just now"
+      skinType: newReview.skinType,
+      location: newReview.location, // Sending location now!
+      title: newReview.title,
+      review: newReview.review,
+      concerns: "User Story" // Placeholder for now
     };
-    setReviews([reviewToAdd, ...reviews]);
-    setShowForm(false);
-    setNewReview({ name: '', skinType: '', title: '', review: '' });
+
+    try {
+      // ✅ CHANGED: Live Render URL
+      await fetch('https://skincache-2-0.onrender.com/submit-review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(reviewData)
+      });
+      fetchReviews();
+      setShowForm(false);
+      setNewReview({ name: '', skinType: 'Combination', location: 'Mumbai', title: '', review: '' });
+    } catch (error) {
+      alert("Backend error (or server waking up). Please try again in 30s.");
+    }
   };
 
   return (
@@ -141,39 +162,42 @@ export default function Community() {
       {/* HEADER */}
       <div className="bg-[#1A0B2E] text-white pt-28 pb-24 px-4 text-center">
         <h1 className="text-4xl md:text-5xl font-bold tracking-wide">Verified Skin Twins</h1>
-        <p className="text-purple-200 mt-2 text-sm md:text-base">Discover full routines that solved your exact problems.</p>
+        <p className="text-purple-200 mt-2 text-sm md:text-base">Real routines from people who match your profile.</p>
       </div>
+
       <div className="max-w-6xl mx-auto -mt-16 px-4 pb-10">
         <div className="bg-white rounded-3xl shadow-2xl overflow-hidden min-h-[600px] flex flex-col md:flex-row">
 
-          {/* --- LEFT: CONTENT FEED --- */}
+          {/* LEFT CONTENT */}
           <div className="flex-1 p-6 bg-gray-50/50">
-
+            
             {/* FILTER BAR */}
             <div className="bg-black rounded-xl p-4 mb-6 shadow-lg flex flex-wrap gap-3 items-center justify-center sticky top-0 z-10">
               <div className="text-white text-xs font-bold uppercase tracking-wider flex items-center gap-2">
                 <Filter size={14} className="text-[#DCA637]"/> Filter By:
               </div>
-              <select className="bg-gray-900 text-white text-xs p-2.5 rounded-lg border border-gray-700 outline-none min-w-[130px] focus:border-[#DCA637]" onChange={(e) => setFilters({...filters, skinType: e.target.value})}>
+              <select className="bg-gray-900 text-white text-xs p-2.5 rounded-lg border border-gray-700 outline-none focus:border-[#DCA637]" onChange={(e) => setFilters({...filters, skinType: e.target.value})}>
                 <option value="All">All Skin Types</option>
                 <option value="Dry">Dry</option>
                 <option value="Oily">Oily</option>
                 <option value="Combination">Combination</option>
                 <option value="Sensitive">Sensitive</option>
               </select>
-              <select className="bg-gray-900 text-white text-xs p-2.5 rounded-lg border border-gray-700 outline-none min-w-[140px] focus:border-[#DCA637]" onChange={(e) => setFilters({...filters, concern: e.target.value})}>
+              <select className="bg-gray-900 text-white text-xs p-2.5 rounded-lg border border-gray-700 outline-none focus:border-[#DCA637]" onChange={(e) => setFilters({...filters, concern: e.target.value})}>
                 <option value="All">All Concerns</option>
                 <option value="Acne">Acne</option>
                 <option value="Redness">Redness</option>
                 <option value="Dehydration">Dehydration</option>
               </select>
-              <select className="bg-gray-900 text-white text-xs p-2.5 rounded-lg border border-gray-700 outline-none min-w-[130px] focus:border-[#DCA637]" onChange={(e) => setFilters({...filters, location: e.target.value})}>
+              <select className="bg-gray-900 text-white text-xs p-2.5 rounded-lg border border-gray-700 outline-none focus:border-[#DCA637]" onChange={(e) => setFilters({...filters, location: e.target.value})}>
                 <option value="All">All Locations</option>
                 <option value="Mumbai">Mumbai</option>
                 <option value="Bangalore">Bangalore</option>
                 <option value="Delhi">Delhi</option>
+                <option value="Pune">Pune</option>
               </select>
             </div>
+
             {/* FORM */}
             {showForm && (
               <div className="mb-8 bg-white p-6 rounded-xl shadow-lg border border-[#DCA637] animate-in slide-in-from-top-4">
@@ -186,49 +210,82 @@ export default function Community() {
                 <form onSubmit={handleSubmit} className="space-y-3">
                   <div className="grid grid-cols-2 gap-3">
                     <input required placeholder="Your Name" className="bg-gray-50 p-3 rounded-lg border text-sm focus:border-[#DCA637] outline-none" value={newReview.name} onChange={e => setNewReview({...newReview, name: e.target.value})} />
-                    <input required placeholder="Skin Type" className="bg-gray-50 p-3 rounded-lg border text-sm focus:border-[#DCA637] outline-none" value={newReview.skinType} onChange={e => setNewReview({...newReview, skinType: e.target.value})} />
+                    
+                    {/* UPDATED: Skin Type Dropdown for Consistency */}
+                    <select className="bg-gray-50 p-3 rounded-lg border text-sm focus:border-[#DCA637] outline-none" value={newReview.skinType} onChange={e => setNewReview({...newReview, skinType: e.target.value})}>
+                        <option value="Combination">Combination</option>
+                        <option value="Oily">Oily</option>
+                        <option value="Dry">Dry</option>
+                        <option value="Sensitive">Sensitive</option>
+                    </select>
                   </div>
+                  
+                  {/* NEW: Location Dropdown */}
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-3.5 text-gray-400" size={16} />
+                    <select className="w-full bg-gray-50 p-3 pl-10 rounded-lg border text-sm focus:border-[#DCA637] outline-none appearance-none" value={newReview.location} onChange={e => setNewReview({...newReview, location: e.target.value})}>
+                        <option value="Mumbai">Mumbai</option>
+                        <option value="Delhi">Delhi</option>
+                        <option value="Bangalore">Bangalore</option>
+                        <option value="Pune">Pune</option>
+                        <option value="Other">Other India</option>
+                    </select>
+                  </div>
+
                   <input required placeholder="Article Title" className="w-full bg-gray-50 p-3 rounded-lg border text-sm font-bold focus:border-[#DCA637] outline-none" value={newReview.title} onChange={e => setNewReview({...newReview, title: e.target.value})} />
                   <textarea required placeholder="Share your full journey..." className="w-full bg-gray-50 p-3 rounded-lg border text-sm h-32 focus:border-[#DCA637] outline-none leading-relaxed" value={newReview.review} onChange={e => setNewReview({...newReview, review: e.target.value})} />
                   <button type="submit" className="w-full bg-[#3D1132] text-white py-3 rounded-lg font-bold text-sm hover:bg-[#2a0b22] shadow-md transition-all">Publish Article</button>
                 </form>
               </div>
             )}
+
+            {/* MESSAGE: Best Match Found */}
+            {isBestMatchMode && filteredReviews.length > 0 && (
+                <div className="mb-4 bg-yellow-50 border border-[#DCA637] text-[#8a661c] px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2">
+                    <Star size={14} fill="currentColor" />
+                    Exact match not found, but here are the best matches for your skin profile!
+                </div>
+            )}
+
             {/* REVIEWS GRID */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {filteredReviews.length === 0 && (
+                <div className="col-span-2 text-center py-10 text-gray-400 text-sm">
+                   No articles found matching your criteria.
+                </div>
+              )}
+              
               {filteredReviews.map((item) => (
                 <div
                   key={item.id}
                   onClick={() => setSelectedRoutine(item)}
                   className="bg-white p-5 rounded-xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all cursor-pointer border border-gray-100 group relative overflow-hidden"
                 >
-                  <div className="pointer-events-none absolute -top-6 -right-8 w-28 h-28 bg-gradient-to-br from-[#f7e3c1] via-[#fdf7e9] to-transparent rounded-full opacity-60 blur-2xl"></div>
+                  {/* Highlight Badge if Best Match */}
+                  {isBestMatchMode && (
+                      <div className="absolute top-0 right-0 bg-[#DCA637] text-white text-[9px] font-bold px-2 py-1 rounded-bl-lg">
+                          BEST MATCH
+                      </div>
+                  )}
+
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex gap-3">
                       <div className="w-10 h-10 bg-gradient-to-br from-purple-100 to-orange-100 rounded-full flex items-center justify-center text-[#3D1132] font-bold text-sm">
-                        {item.name[0]}
+                        {item.name ? item.name[0] : "U"}
                       </div>
                       <div>
                         <h3 className="font-bold text-gray-900 text-sm">{item.name}</h3>
-                        <p className="text-xs text-gray-500">{item.location}</p>
+                        <p className="text-xs text-gray-500 flex items-center gap-1">
+                           <MapPin size={10} /> {item.location || "India"}
+                        </p>
                       </div>
                     </div>
                     <div className="bg-purple-50 text-[#3D1132] text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide">
-                      {item.skinType.split('•')[0]}
+                      {item.skinType ? item.skinType.split('•')[0] : "Skin"}
                     </div>
                   </div>
                   <h4 className="font-bold text-sm text-[#DCA637] mb-2 line-clamp-1">{item.title}</h4>
-                  <div className="mb-4">
-                    <p className="text-[10px] text-gray-400 uppercase font-semibold mb-1">Key Solvers:</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {item.heroIngredients.map((ing, i) => (
-                        <span key={i} className="text-[10px] bg-gray-100 text-gray-700 px-2 py-1 rounded border border-gray-200 flex items-center gap-1">
-                          <Beaker size={8} /> {ing}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="flex items-center text-[#3D1132] text-xs font-bold group-hover:underline">
+                  <div className="flex items-center text-[#3D1132] text-xs font-bold group-hover:underline mt-4">
                     Read Article <ArrowRight size={12} className="ml-1" />
                   </div>
                 </div>
@@ -236,13 +293,9 @@ export default function Community() {
             </div>
           </div>
 
-          {/* --- RIGHT: SIDEBAR (UPDATED) --- */}
+          {/* RIGHT SIDEBAR */}
           <div className="w-full md:w-80 bg-white border-l border-gray-100 p-6 hidden md:block">
-
-             {/* CTA CARD */}
              <div className="bg-gradient-to-br from-[#3D1132] to-[#5e1b4d] rounded-2xl p-6 text-white text-center mb-8 shadow-xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -mr-10 -mt-10 blur-xl"></div>
-                <div className="absolute bottom-0 left-4 w-16 h-16 bg-[#DCA637]/20 rounded-full blur-3xl"></div>
                 <Heart className="mx-auto mb-3 text-[#DCA637]" size={28} fill="#DCA637" />
                 <h3 className="font-bold text-lg mb-2">Help Your Skin Twin</h3>
                 <p className="text-purple-100 text-xs mb-4 leading-relaxed">
@@ -255,21 +308,13 @@ export default function Community() {
                   Write an Article
                 </button>
              </div>
-             {/* BEGINNER GUIDES SECTION */}
-             <h3 className="font-bold text-gray-900 mb-4 text-sm uppercase tracking-wide flex items-center gap-2">
-               <Sparkles size={16} className="text-[#DCA637]"/> Beginner Guides
-             </h3>
+             
+             {/* Guides List */}
              <div className="space-y-4">
               {GUIDES.map((guide) => (
-                <div
-                  key={guide.id}
-                  onClick={() => setSelectedRoutine(guide)}
-                  className={`p-4 rounded-xl border ${guide.accent} ${guide.color} group cursor-pointer hover:shadow-md transition-all relative overflow-hidden`}
-                >
-                  <div className="pointer-events-none absolute -top-6 -left-4 w-20 h-20 bg-gradient-to-br from-white/70 via-white/30 to-transparent rounded-full blur-xl"></div>
-                  <div className="pointer-events-none absolute -bottom-10 -right-6 w-28 h-28 bg-gradient-to-tr from-[#dca6371a] via-[#3d113214] to-transparent rounded-full blur-2xl"></div>
-                  <div className="flex items-center gap-4 mb-3 relative z-10">
-                    <div className="w-12 h-12 bg-gradient-to-br from-white to-white/60 rounded-full flex items-center justify-center shadow-sm">
+                <div key={guide.id} onClick={() => setSelectedRoutine(guide)} className={`p-4 rounded-xl border ${guide.accent} ${guide.color} cursor-pointer hover:shadow-md transition-all`}>
+                  <div className="flex items-center gap-4 mb-3">
+                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm">
                       {guide.icon}
                     </div>
                     <div>
@@ -277,54 +322,27 @@ export default function Community() {
                       <p className="text-xs text-gray-500">Heal & Balance</p>
                     </div>
                   </div>
-                  <div className="flex justify-between items-center border-t border-black/5 pt-3 relative z-10">
-                     <span className="text-[10px] font-bold text-gray-500 uppercase">Read Guide</span>
-                     <div className="bg-white p-1 rounded-full text-gray-400 group-hover:text-[#3D1132] group-hover:bg-[#DCA637] transition-colors">
-                       <ArrowRight size={12} />
-                     </div>
-                  </div>
                 </div>
               ))}
              </div>
           </div>
         </div>
       </div>
-      {/* --- ARTICLE MODAL --- */}
+
+      {/* MODAL */}
       {selectedRoutine && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in" onClick={() => setSelectedRoutine(null)}>
           <div className="bg-white w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl animate-in zoom-in-95" onClick={(e) => e.stopPropagation()}>
-            <div className="relative h-48 overflow-hidden rounded-t-2xl">
-              <div className="absolute inset-0 bg-gradient-to-r from-[#3D1132] via-[#4b1540] to-[#DCA637] opacity-90"></div>
-              <div className="absolute -left-10 -top-6 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
-              <div className="absolute -right-12 bottom-0 w-48 h-48 bg-[#DCA637]/20 rounded-full blur-3xl"></div>
-              <button onClick={() => setSelectedRoutine(null)} className="absolute top-4 right-4 bg-black/50 hover:bg-black text-white p-2 rounded-full transition-colors z-10"><X size={20} /></button>
-              <div className="absolute bottom-4 left-6 text-white z-10">
-                <h2 className="text-2xl font-bold">{selectedRoutine.title}</h2>
-                <div className="flex items-center gap-2 text-sm mt-1 text-purple-100"><User size={14} /> {selectedRoutine.name}</div>
-              </div>
+            <div className="relative h-48 overflow-hidden rounded-t-2xl bg-[#3D1132] p-6 text-white">
+                <button onClick={() => setSelectedRoutine(null)} className="absolute top-4 right-4 bg-black/20 hover:bg-black/40 p-2 rounded-full"><X size={20} /></button>
+                <h2 className="text-2xl font-bold mt-10">{selectedRoutine.title}</h2>
+                <div className="flex items-center gap-2 text-sm mt-2 text-purple-200"><User size={14} /> {selectedRoutine.name} • {selectedRoutine.location}</div>
             </div>
             <div className="p-8">
-              <div className="flex gap-2 mb-6">
-                 <span className="bg-[#DCA637]/20 text-[#DCA637] px-3 py-1 rounded-full text-xs font-bold border border-[#DCA637]/30">{selectedRoutine.skinType}</span>
-              </div>
-               <h3 className="font-bold text-gray-900 text-lg mb-3">The Expert Strategy</h3>
-               <p className="text-gray-600 leading-relaxed whitespace-pre-line mb-8">{selectedRoutine.fullStory}</p>
-
-               <div className="bg-purple-50 p-6 rounded-xl border border-purple-100">
-                <h3 className="font-bold text-[#3D1132] mb-4 flex items-center gap-2">
-                  <Beaker size={18} /> Recommended Ingredients
-                </h3>
-                <div className="grid grid-cols-2 gap-4">
-                  {selectedRoutine.heroIngredients.map((ing, idx) => (
-                    <div key={idx} className="bg-white p-3 rounded-lg shadow-sm text-sm font-medium text-gray-700 flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-[#DCA637]"></div>
-                      {ing}
-                    </div>
-                  ))}
-                </div>
-              </div>
+               <span className="bg-[#DCA637]/20 text-[#DCA637] px-3 py-1 rounded-full text-xs font-bold">{selectedRoutine.skinType}</span>
+               <p className="text-gray-600 leading-relaxed whitespace-pre-line mt-6">{selectedRoutine.fullStory}</p>
                <div className="mt-8 flex justify-end">
-                <button onClick={() => setSelectedRoutine(null)} className="px-6 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-bold text-sm">Close Guide</button>
+                <button onClick={() => setSelectedRoutine(null)} className="px-6 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-bold text-sm">Close</button>
                </div>
             </div>
           </div>

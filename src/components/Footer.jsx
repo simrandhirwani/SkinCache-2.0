@@ -41,7 +41,7 @@ const Footer = () => {
                 Future Me
               </a>
               <a href="/contact" className="hover:text-white">
-                Contact Us
+                HealthBridge
               </a>
             </div>
           </div>
