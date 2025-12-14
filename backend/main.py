@@ -272,7 +272,8 @@ async def analyze_ingredients(
         if not GEMINI_API_KEY:
             raise HTTPException(status_code=500, detail="Gemini Key Missing in Server")
 
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        
+        model = genai.GenerativeModel('gemini-1.5-flash-latest')
         
         # PROMPT: Strict Dermatologist Mode
         system_prompt = """
