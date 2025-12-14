@@ -6,6 +6,7 @@ import IngredientAnalyzer from './pages/IngredientAnalyzer';
 import Community from './pages/Community';
 import DermatologistPage from './pages/DermatologistPage';
 import ChallengesPage from './pages/ChallengesPage';
+import FutureMePage from './pages/FutureMePage';
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
         <Route path="/community" element={<Community />} />
         <Route path="/healthbridge" element={<DermatologistPage />} />
         <Route path="/challenges" element={<ChallengesPage />} />
+        <Route path="/future-me" element={<FutureMePage />} />
         {/* Add more routes as needed */}
       </Routes>
     </Router>
