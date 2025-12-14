@@ -1,16 +1,56 @@
-# React + Vite
+# ✨ SkinCache: AI-Powered Skincare Intelligence
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+> **Your Personal AI Dermatologist & Community Companion.**
+> *Built for [Insert Startathon Name/Year]*
 
-Currently, two official plugins are available:
+![SkinCache Banner](https://placehold.co/1200x300/3D1132/DCA637?text=SkinCache+Platform+Demo)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 🚀 Overview
+**SkinCache** is a comprehensive skincare intelligence platform designed to bridge the gap between confusion and clarity. We combine **AI ingredient analysis** with **hyper-personalized community data** ("Skin Twins") to help users build safe, effective routines without the trial-and-error.
 
-## React Compiler
+This repository contains the **Frontend MVP** built with React & Tailwind CSS.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## ⚡ Key Features
 
-## Expanding the ESLint configuration
+### 1. 🔍 Product Intelligence Scanner
+- **Hybrid Input:** Accepts both product photos (drag & drop) and direct ingredient text pasting.
+- **Safety Analysis:** Instantly checks for "Steroids," "Comedogenic" ingredients, and routine conflicts.
+- **Visual Score:** Provides a simple "Safe Match" percentage.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### 2. 👯 Verified Skin Twins (Community)
+- **Smart Filtering:** Find reviews from people who match your *exact* profile (e.g., "Oily • Acne-Prone • Mumbai Humidity").
+- **Routine Sharing:** Users can post their full routines and write detailed articles/case studies.
+- **Expert Articles:** Integrated "Beginner Guides" for specific skin types.
+
+### 3. 🏆 Gamified Challenges
+- **Habit Builder:** Users join missions like "7-Day Hydration Hero" or "Sunscreen Streak."
+- **Streak Tracking:** Visual progress bars and XP rewards for consistency.
+- **Interactive:** Daily check-in system with celebration animations.
+
+### 4. 🔮 Future Me Trajectory
+- **AI Prediction:** Visualizes skin health 5 years into the future based on current habits.
+- **Scenario Toggle:** Compares "With SkinCache Routine" vs. "Without Intervention."
+
+### 5. 🩺 Dermatologist Connect
+- **Tiered Access:** Options for quick "AI Triage" (₹199) or full "Specialist Consultation" (₹799).
+- **Booking Flow:** Mock payment gateway integration and appointment scheduling.
+
+---
+
+## 🛠️ Tech Stack
+- **Framework:** React.js (Vite)
+- **Styling:** Tailwind CSS
+- **Icons:** Lucide React
+- **State Management:** React Hooks (`useState`, `useContext`)
+- **Deployment:** [Vercel / Netlify / GitHub Pages]
+
+---
+
+## 🏁 Getting Started
+
+To run this project locally, follow these steps:
+
+### 1. Clone the repository
+```bash
+git clone [https://github.com/YOUR_USERNAME/skincache-frontend.git](https://github.com/YOUR_USERNAME/skincache-frontend.git)
+cd skincache-frontend

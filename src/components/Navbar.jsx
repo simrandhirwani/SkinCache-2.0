@@ -26,6 +26,27 @@ const Navbar = () => {
     return activeLink ? activeLink.name : 'HOME';
   };
 
+  // --- NEW FUNCTION: SMART SCROLL ---
+  const handleJoinWaitlist = () => {
+    // 1. If we are NOT on the home page, go there first
+    if (location.pathname !== '/home' && location.pathname !== '/') {
+      navigate('/home');
+      // Wait 100ms for the page to load, then scroll
+      setTimeout(() => {
+        const element = document.getElementById('waitlist');
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+    } else {
+      // 2. If we ARE on the home page, just scroll immediately
+      const element = document.getElementById('waitlist');
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  };
+
   const active = getActiveLink();
 
   return (
@@ -76,12 +97,12 @@ const Navbar = () => {
 
         {/* Right: CTA */}
         <div className="hidden lg:flex items-center">
-          <a
-            href="#waitlist"
+          <button
+            onClick={handleJoinWaitlist}
             className="rounded-md bg-gradient-to-r from-[#FACC15] to-[#CA8A04] px-6 py-2 text-[11px] font-bold uppercase tracking-wider text-[#1A0B2E] shadow-[0_0_20px_rgba(250,204,21,0.25)] transition-all duration-300 hover:shadow-[0_0_30px_rgba(250,204,21,0.4)] hover:scale-105"
           >
             Join Waitlist
-          </a>
+          </button>
         </div>
 
         {/* Mobile */}
