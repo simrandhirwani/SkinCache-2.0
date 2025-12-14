@@ -259,7 +259,7 @@ async def analyze_skin(file: UploadFile = File(...), lat: str = Form("0"), lon: 
     except Exception as e:
         return {"error": str(e)}
 
-# --- E. ROBUST GEMINI (HTTP Mode - No Library) ---
+# --- E. ROBUST GEMINI (HTTP Mode - UPDATED TO 2.5) ---
 @app.post("/analyze-ingredients")
 async def analyze_ingredients(
     text: str = Form(None), 
@@ -302,19 +302,19 @@ async def analyze_ingredients(
                 }
             })
 
-        # 3. DIRECT HTTP REQUEST (Bypasses Library Version Issues)
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+        # 3. DIRECT HTTP REQUEST (UPDATED TO GEMINI 2.5 FLASH)
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
         
         payload = {
             "contents": [{ "parts": parts }]
         }
 
-        print("🚀 Sending Direct Request to Google Gemini...")
+        print("🚀 Sending Direct Request to Google Gemini 2.5...")
         response = requests.post(url, json=payload)
         
         if response.status_code != 200:
             print(f"Google API Error: {response.text}")
-            return {"error": "Google AI Refused Connection"}
+            return {"error": f"Google AI Error: {response.text}"}
 
         # 4. PARSE RESPONSE
         result = response.json()
