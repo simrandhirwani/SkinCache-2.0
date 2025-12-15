@@ -4,16 +4,15 @@ import requests
 import psycopg2 
 import base64
 import json
-# --- NEW IMPORTS FOR EMAIL ---
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-# -----------------------------
 from psycopg2.extras import RealDictCursor
 from datetime import datetime, date
 from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File, Form
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles  # CRITICAL IMPORT
 from dotenv import load_dotenv
 
 # Load keys from .env file (for local development)
@@ -134,11 +133,9 @@ class ChallengeCheckin(BaseModel):
 # 4. HELPER FUNCTIONS
 # ==========================================
 
-# --- NEW CUSTOM EMAIL SENDER FUNCTION (FIXED) ---
 def send_confirmation_email(name, email):
     # This function uses Python's standard library to send email via SMTP (Gmail)
     
-    # Check if credentials are set in .env/Render
     if not SMTP_EMAIL or not SMTP_PASSWORD:
         print("⚠️ SMTP credentials missing. Cannot send email.")
         return
@@ -146,13 +143,11 @@ def send_confirmation_email(name, email):
     sender_email = SMTP_EMAIL
     receiver_email = email
     
-    # 1. Email structure setup
     message = MIMEMultipart("alternative")
     message["Subject"] = "You're In! Welcome to the SkinCache Community! ✨"
     message["From"] = f"The SkinCache Team <{sender_email}>"
     message["To"] = receiver_email
 
-    # 2. Custom HTML Content (Footer year fixed to prevent background task errors)
     html = f"""
     <html>
     <body style="font-family: sans-serif; background-color: #f4f4f4; padding: 20px;">
@@ -209,12 +204,10 @@ def send_confirmation_email(name, email):
     </html>
     """
     
-    # 3. Attach and Send
     part = MIMEText(html, "html")
     message.attach(part)
 
     try:
-        # Connect to Gmail's secure SMTP server on port 465
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
             server.login(SMTP_EMAIL, SMTP_PASSWORD)
             server.sendmail(sender_email, receiver_email, message.as_string())
@@ -225,7 +218,6 @@ def send_confirmation_email(name, email):
     except Exception as e:
         print(f"❌ SMTP Email Error: {e}")
         return False
-# ----------------------------------------
 
 def save_waitlist_to_sheet(name, email):
     try:
@@ -246,11 +238,9 @@ def get_neon_connection():
 # 5. ENDPOINTS
 # ==========================================
 
-@app.get("/")
-def read_root():
-    return {"status": "SkinCache Hybrid Backend is Live!"}
+# 🗑️ DELETED: The conflicting @app.get("/") is GONE!
 
-# --- A. WAITLIST (UPDATED) ---
+# --- A. WAITLIST ---
 @app.post("/join")
 def join_waitlist(user: UserData, background_tasks: BackgroundTasks):
     conn = sqlite3.connect(DB_NAME)
@@ -376,10 +366,8 @@ async def analyze_ingredients(
 ):
     try:
         if not GEMINI_API_KEY:
-            # Return JSON error structure to fix frontend SyntaxError
             return {"error": "Gemini Key Missing in Server"}
 
-        # 1. PREPARE PROMPT
         prompt_text = """
         You are an expert Dermatologist. Analyze the skincare ingredients provided.
         Identify the Top 3 "Hero" ingredients and any "Risky" ingredients (comedogenic, irritants, fungal acne triggers).
@@ -393,7 +381,6 @@ async def analyze_ingredients(
         }
         """
 
-        # 2. BUILD PAYLOAD
         parts = [{"text": prompt_text}]
         
         if text:
@@ -402,9 +389,7 @@ async def analyze_ingredients(
         if file:
             print("📸 Processing Ingredient Photo...")
             image_bytes = await file.read()
-            # Convert image bytes to Base64 string
             image_b64 = base64.b64encode(image_bytes).decode('utf-8')
-            
             parts.append({
                 "inline_data": {
                     "mime_type": file.content_type,
@@ -412,24 +397,16 @@ async def analyze_ingredients(
                 }
             })
 
-        # 3. DIRECT HTTP REQUEST (UPDATED TO GEMINI 2.5 FLASH)
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
-        
-        payload = {
-            "contents": [{ "parts": parts }]
-        }
+        payload = {"contents": [{ "parts": parts }]}
 
         print("🚀 Sending Direct Request to Google Gemini 2.5...")
         response = requests.post(url, json=payload)
         
-        # --- AGGRESSIVE ERROR CHECKING ---
         if response.status_code != 200:
             print(f"Google API Error Status: {response.status_code}")
-            # Return JSON error structure to fix frontend SyntaxError
             return {"error": f"AI Service Error (Status {response.status_code}). Please check API Key and Try again."}
-        # ---------------------------------
 
-        # 4. PARSE RESPONSE
         result = response.json()
         try:
             raw_text = result['candidates'][0]['content']['parts'][0]['text']
@@ -437,11 +414,21 @@ async def analyze_ingredients(
             return {"analysis": clean_json}
         except KeyError:
              print(f"Unexpected Response Structure: {result}")
-             # Return JSON error structure to fix frontend SyntaxError
              return {"error": "AI could not process this request or returned malformed JSON."}
 
     except Exception as e:
         print(f"Server Error: {e}")
-        # Return JSON error structure to fix frontend SyntaxError
         return {"error": f"Internal Server Error: {str(e)}"}
-        app.mount("/", StaticFiles(directory="..", html=True), name="static_site")
+
+# ==========================================
+# 6. STATIC FILE SERVING (CRITICAL FIX)
+# ==========================================
+# We mount the 'dist' folder because that is where 'npm run build' puts your finished website.
+# 'directory="../dist"' means: Go UP one level from 'backend/', then into 'dist/'.
+
+if os.path.exists("../dist"):
+    app.mount("/", StaticFiles(directory="../dist", html=True), name="static_site")
+elif os.path.exists("../build"):
+    app.mount("/", StaticFiles(directory="../build", html=True), name="static_site")
+else:
+    print("⚠️ WARNING: No build folder found! Did you run 'npm run build'?")
