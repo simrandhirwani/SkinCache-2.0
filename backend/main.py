@@ -4,6 +4,11 @@ import requests
 import psycopg2 
 import base64
 import json
+# --- NEW IMPORTS FOR EMAIL ---
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+# -----------------------------
 from psycopg2.extras import RealDictCursor
 from datetime import datetime, date
 from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File, Form
@@ -35,6 +40,11 @@ FACEPP_KEY         = os.getenv("FACEPP_KEY")
 FACEPP_SECRET      = os.getenv("FACEPP_SECRET")
 WEATHER_KEY        = os.getenv("WEATHER_KEY")
 GEMINI_API_KEY     = os.getenv("GEMINI_API_KEY") 
+
+# === NEW KEYS FOR EMAIL (SMTP) ===
+SMTP_EMAIL = os.getenv("SMTP_EMAIL")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
+# =================================
 
 DB_NAME = "skincache.db"
 
@@ -124,6 +134,100 @@ class ChallengeCheckin(BaseModel):
 # 4. HELPER FUNCTIONS
 # ==========================================
 
+# --- NEW CUSTOM EMAIL SENDER FUNCTION ---
+def send_confirmation_email(name, email):
+    # This function uses Python's standard library to send email via SMTP (Gmail)
+    
+    # Check if credentials are set in .env/Render
+    if not SMTP_EMAIL or not SMTP_PASSWORD:
+        print("⚠️ SMTP credentials missing. Cannot send email.")
+        return
+
+    sender_email = SMTP_EMAIL
+    receiver_email = email
+    
+    # 1. Email structure setup
+    message = MIMEMultipart("alternative")
+    message["Subject"] = "You're In! Welcome to the SkinCache Community! ✨"
+    message["From"] = f"The SkinCache Team <{sender_email}>"
+    message["To"] = receiver_email
+
+    # 2. Custom HTML Content (Based on your beautiful design)
+    # Note: Using inline CSS for best email client compatibility
+    html = f"""
+    <html>
+    <body style="font-family: sans-serif; background-color: #f4f4f4; padding: 20px;">
+        <div style="max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+
+            <div style="background-color: #3D1132; color: white; padding: 30px 20px; text-align: center;">
+                <h1 style="margin: 0; font-size: 28px; font-weight: bold; letter-spacing: 1px;">
+                    WELCOME, {name.upper()}
+                </h1>
+            </div>
+
+            <div style="padding: 25px 35px;">
+                <h2 style="color: #3D1132; font-size: 24px;">You made it! 🎉</h2>
+                <p style="color: #4a4a4a; line-height: 1.6;">
+                    Hi {name},
+                </p>
+                <p style="color: #4a4a4a; line-height: 1.6;">
+                    You just made the best decision for your skin. While others are still guessing with "trial and error," you've secured your spot for science-backed skin intelligence. ✨
+                </p>
+
+                <div style="background-color: #f1f8e9; border-left: 5px solid #66bb6a; padding: 15px; margin: 20px 0; border-radius: 5px;">
+                    <p style="margin: 0; color: #1b5e20; font-weight: bold;">
+                        🚀 Your Spot is SECURED!
+                    </p>
+                    <p style="margin: 5px 0 0 0; color: #4a4a4a; font-size: 14px;">
+                        You are officially in the SkinCache Priority Community.
+                    </p>
+                </div>
+
+                <h3 style="color: #3D1132; font-size: 18px; margin-top: 30px;">Here is what awaits you inside:</h3>
+                <ul style="list-style-type: none; padding: 0;">
+                    <li style="margin-bottom: 10px; color: #4a4a4a;">🔍 Instant Ingredient Analysis</li>
+                    <li style="margin-bottom: 10px; color: #4a4a4a;">🔬 Verified Skin Insights (No more hidden nasties)</li>
+                    <li style="margin-bottom: 10px; color: #4a4a4a;">🔮 "Future Me" Prediction Tool</li>
+                </ul>
+
+                <p style="color: #4a4a4a; line-height: 1.6; margin-top: 30px;">
+                    We are putting the finishing touches on the platform. Watch this space—your invite code will drop soon! ❤️
+                </p>
+
+                <p style="color: #3D1132; font-weight: bold; margin-top: 30px;">
+                    Stay glowing,<br>
+                    The SkinCache Team 💜
+                </p>
+            </div>
+            
+            <div style="background-color: #3D1132; color: white; padding: 15px 20px; text-align: center; font-size: 12px;">
+                <p style="margin: 0; font-weight: bold; color: #DCA637;">SKINCACHE</p>
+                <p style="margin: 5px 0 0 0; color: #aaa;">Made with Science & Love.<br>&copy; {datetime.now().year} SkinCache Inc.</p>
+            </div>
+
+        </div>
+    </body>
+    </html>
+    """
+    
+    # 3. Attach and Send
+    part = MIMEText(html, "html")
+    message.attach(part)
+
+    try:
+        # Connect to Gmail's secure SMTP server on port 465
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(SMTP_EMAIL, SMTP_PASSWORD)
+            server.sendmail(sender_email, receiver_email, message.as_string())
+        
+        print(f"📧 SMTP email sent to {email}. Status: SUCCESS")
+        return True
+
+    except Exception as e:
+        print(f"❌ SMTP Email Error: {e}")
+        return False
+# ----------------------------------------
+
 def save_waitlist_to_sheet(name, email):
     try:
         if SHEET_WAITLIST_URL:
@@ -147,7 +251,7 @@ def get_neon_connection():
 def read_root():
     return {"status": "SkinCache Hybrid Backend is Live!"}
 
-# --- A. WAITLIST ---
+# --- A. WAITLIST (UPDATED) ---
 @app.post("/join")
 def join_waitlist(user: UserData, background_tasks: BackgroundTasks):
     conn = sqlite3.connect(DB_NAME)
@@ -155,7 +259,13 @@ def join_waitlist(user: UserData, background_tasks: BackgroundTasks):
     try:
         c.execute("INSERT INTO users (name, email) VALUES (?, ?)", (user.name, user.email))
         conn.commit()
+        
+        # 1. Save data to Google Sheet
         background_tasks.add_task(save_waitlist_to_sheet, user.name, user.email)
+        
+        # 2. Send the confirmation email
+        background_tasks.add_task(send_confirmation_email, user.name, user.email) 
+        
         return {"message": "Success"}
     except sqlite3.IntegrityError:
         raise HTTPException(status_code=400, detail="Email already exists")
