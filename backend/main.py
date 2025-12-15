@@ -134,7 +134,7 @@ class ChallengeCheckin(BaseModel):
 # 4. HELPER FUNCTIONS
 # ==========================================
 
-# --- NEW CUSTOM EMAIL SENDER FUNCTION ---
+# --- NEW CUSTOM EMAIL SENDER FUNCTION (FIXED) ---
 def send_confirmation_email(name, email):
     # This function uses Python's standard library to send email via SMTP (Gmail)
     
@@ -152,8 +152,7 @@ def send_confirmation_email(name, email):
     message["From"] = f"The SkinCache Team <{sender_email}>"
     message["To"] = receiver_email
 
-    # 2. Custom HTML Content (Based on your beautiful design)
-    # Note: Using inline CSS for best email client compatibility
+    # 2. Custom HTML Content (With stable footer year)
     html = f"""
     <html>
     <body style="font-family: sans-serif; background-color: #f4f4f4; padding: 20px;">
@@ -202,7 +201,7 @@ def send_confirmation_email(name, email):
             
             <div style="background-color: #3D1132; color: white; padding: 15px 20px; text-align: center; font-size: 12px;">
                 <p style="margin: 0; font-weight: bold; color: #DCA637;">SKINCACHE</p>
-                <p style="margin: 5px 0 0 0; color: #aaa;">Made with Science & Love.<br>&copy; {datetime.now().year} SkinCache Inc.</p>
+                <p style="margin: 5px 0 0 0; color: #aaa;">Made with Science & Love.<br>&copy; 2025 SkinCache Inc.</p> 
             </div>
 
         </div>
