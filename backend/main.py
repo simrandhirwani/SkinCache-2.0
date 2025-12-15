@@ -152,7 +152,7 @@ def send_confirmation_email(name, email):
     message["From"] = f"The SkinCache Team <{sender_email}>"
     message["To"] = receiver_email
 
-    # 2. Custom HTML Content (With stable footer year)
+    # 2. Custom HTML Content (Footer year fixed to prevent background task errors)
     html = f"""
     <html>
     <body style="font-family: sans-serif; background-color: #f4f4f4; padding: 20px;">
@@ -376,7 +376,8 @@ async def analyze_ingredients(
 ):
     try:
         if not GEMINI_API_KEY:
-            raise HTTPException(status_code=500, detail="Gemini Key Missing in Server")
+            # Return JSON error structure to fix frontend SyntaxError
+            return {"error": "Gemini Key Missing in Server"}
 
         # 1. PREPARE PROMPT
         prompt_text = """
@@ -421,9 +422,12 @@ async def analyze_ingredients(
         print("🚀 Sending Direct Request to Google Gemini 2.5...")
         response = requests.post(url, json=payload)
         
+        # --- AGGRESSIVE ERROR CHECKING ---
         if response.status_code != 200:
-            print(f"Google API Error: {response.text}")
-            return {"error": f"Google AI Error: {response.text}"}
+            print(f"Google API Error Status: {response.status_code}")
+            # Return JSON error structure to fix frontend SyntaxError
+            return {"error": f"AI Service Error (Status {response.status_code}). Please check API Key and Try again."}
+        # ---------------------------------
 
         # 4. PARSE RESPONSE
         result = response.json()
@@ -433,8 +437,10 @@ async def analyze_ingredients(
             return {"analysis": clean_json}
         except KeyError:
              print(f"Unexpected Response Structure: {result}")
-             return {"error": "AI could not process this image."}
+             # Return JSON error structure to fix frontend SyntaxError
+             return {"error": "AI could not process this request or returned malformed JSON."}
 
     except Exception as e:
         print(f"Server Error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        # Return JSON error structure to fix frontend SyntaxError
+        return {"error": f"Internal Server Error: {str(e)}"}
