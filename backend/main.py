@@ -444,3 +444,4 @@ async def analyze_ingredients(
         print(f"Server Error: {e}")
         # Return JSON error structure to fix frontend SyntaxError
         return {"error": f"Internal Server Error: {str(e)}"}
+        app.mount("/", StaticFiles(directory="..", html=True), name="static_site")
