@@ -1,7 +1,7 @@
 # ✨ SkinCache: AI-Powered Skincare Intelligence
 
 > **Your Personal AI Dermatologist & Community Companion.**
-> *Built for [Insert Startathon Name/Year]*
+> *Built for startathon*
 
 ![SkinCache Banner](https://placehold.co/1200x300/3D1132/DCA637?text=SkinCache+Platform+Demo)
 
