@@ -17,7 +17,7 @@ const DataStory = () => {
             Beauty, Backed by Data.
           </h2>
           <p className="text-white/70">
-          Stop guessing. Start knowing. Skincache bridges the gap between the clinic and your vanity, replacing marketing hype with dermatological precision. Because your skin deserves evidence, not just influence
+          Stop guessing. Start knowing. SkinCache bridges the gap between the clinic and your vanity, replacing marketing hype with dermatological precision. Because your skin deserves evidence, not just influence
           </p>
           <p className="pt-2 font-script text-2xl text-white/80">The Founders</p>
         </div>
